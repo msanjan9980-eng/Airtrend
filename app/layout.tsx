@@ -1,5 +1,8 @@
 ﻿import type { Metadata } from "next";
 import "./globals.css";
+import SettingsProvider from "@/components/SettingsProvider";
+import { ToastProvider, ToastContainer } from "@/components/ToastProvider";
+import AppShell from "@/components/AppShell";
 
 export const metadata: Metadata = {
   title: "AirTrend | Sensor Intelligence",
@@ -14,8 +17,15 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" data-theme="dark" suppressHydrationWarning>
+      <body>
+        <SettingsProvider>
+          <ToastProvider>
+            <AppShell>{children}</AppShell>
+            <ToastContainer />
+          </ToastProvider>
+        </SettingsProvider>
+      </body>
     </html>
   );
 }
