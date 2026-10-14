@@ -16,7 +16,7 @@ export default function Sidebar() {
   const path = usePathname();
   const { settings } = useSettings();
   return (
-    <aside className="hidden lg:flex flex-col w-60 shrink-0 border-r border-border bg-bg-panel/60 backdrop-blur-md h-screen sticky top-0">
+    <aside className="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 w-60 z-30 border-r border-border bg-bg-panel/80 backdrop-blur-md">
       <div className="p-5 border-b border-border">
         <div className="flex items-center gap-2.5">
           <div className="relative">
