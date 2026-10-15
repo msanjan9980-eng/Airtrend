@@ -1,18 +1,88 @@
 ﻿"use client";
+
 import { Command, Radio } from "lucide-react";
 import { useEffect, useState } from "react";
 import ThemeToggle from "./ThemeToggle";
 import ConnectionStatus from "./ConnectionStatus";
 
+type SensorStatus = {
+  timestamp: string | null;
+  error: string | null;
+};
+
 export default function Header() {
+  const [sensor, setSensor] = useState<SensorStatus>({
+    timestamp: null,
+    error: null,
+  });
   const [, setTick] = useState(0);
-  const [lastPing] = useState(() => new Date().toISOString());
+
   useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
+    let active = true;
+
+    const fetchLatest = async () => {
+      try {
+        const response = await fetch("/api/data", {
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        const rows = Array.isArray(data.rows) ? data.rows : [];
+
+        const newest = rows.reduce(
+          (latest: string | null, row: { timestamp?: string }) => {
+            if (!row.timestamp) return latest;
+            if (!latest) return row.timestamp;
+
+            return new Date(row.timestamp).getTime() >
+              new Date(latest).getTime()
+              ? row.timestamp
+              : latest;
+          },
+          null
+        );
+
+        if (active) {
+          setSensor({ timestamp: newest, error: null });
+        }
+      } catch (err) {
+        if (active) {
+          setSensor({
+            timestamp: null,
+            error: err instanceof Error ? err.message : "Connection failed",
+          });
+        }
+      }
+    };
+
+    void fetchLatest();
+
+    const pollId = window.setInterval(() => {
+      void fetchLatest();
+    }, 3000);
+
+    const tickId = window.setInterval(() => {
+      setTick((tick) => tick + 1);
+    }, 1000);
+
+    return () => {
+      active = false;
+      window.clearInterval(pollId);
+      window.clearInterval(tickId);
+    };
   }, []);
 
-  const secondsAgo = Math.floor((Date.now() - new Date(lastPing).getTime()) / 1000);
+  const timestamp = sensor.timestamp
+    ? new Date(sensor.timestamp).getTime()
+    : NaN;
+
+  const secondsAgo = Number.isFinite(timestamp)
+    ? Math.max(0, Math.floor((Date.now() - timestamp) / 1000))
+    : null;
 
   return (
     <header className="border-b border-border bg-bg-panel/60 backdrop-blur-md sticky top-0 z-40">
@@ -24,24 +94,35 @@ export default function Header() {
           </div>
           <h1 className="text-lg font-bold tracking-tight">AirTrend</h1>
         </div>
+
         <div className="hidden lg:block">
           <p className="text-sm font-medium text-muted">Overview Dashboard</p>
         </div>
 
         <div className="flex items-center gap-2">
-          <ConnectionStatus secondsAgo={secondsAgo} />
+          <ConnectionStatus secondsAgo={secondsAgo} error={sensor.error} />
+
           <button
             onClick={() => {
-              const e = new KeyboardEvent("keydown", { key: "k", ctrlKey: true, metaKey: true, bubbles: true });
-              window.dispatchEvent(e);
+              window.dispatchEvent(
+                new KeyboardEvent("keydown", {
+                  key: "k",
+                  ctrlKey: true,
+                  metaKey: true,
+                  bubbles: true,
+                })
+              );
             }}
             className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-bg-card text-xs text-muted hover:border-border-accent hover:text-accent-cyan transition-all"
             title="Open command palette"
           >
             <Command className="w-3.5 h-3.5" />
             <span>Commands</span>
-            <kbd className="px-1.5 py-0.5 rounded bg-bg-hover font-mono text-[10px]">⌘K</kbd>
+            <kbd className="px-1.5 py-0.5 rounded bg-bg-hover font-mono text-[10px]">
+              ⌘K
+            </kbd>
           </button>
+
           <ThemeToggle />
         </div>
       </div>

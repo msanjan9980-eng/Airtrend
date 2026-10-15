@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useMemo, useRef, useState } from "react";
 import { Area, AreaChart, CartesianGrid, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { SensorReading } from "@/lib/types";
@@ -23,10 +23,25 @@ export default function SignalChart({ data }: Props) {
   useEscapeToExit(fullscreen, () => setFullscreen(false));
 
   const filtered = useMemo(() => {
-    if (range === "all") return data;
+    const ordered = [...data].sort(
+      (a, b) =>
+        new Date(a.timestamp).getTime() -
+        new Date(b.timestamp).getTime()
+    );
+
+    if (range === "all" || ordered.length === 0) return ordered;
+
     const seconds = range === "1m" ? 60 : range === "5m" ? 300 : 900;
-    const last = data.length ? new Date(data[data.length - 1].timestamp).getTime() : 0;
-    return data.filter((r) => last - new Date(r.timestamp).getTime() <= seconds * 1000);
+    const latest = new Date(
+      ordered[ordered.length - 1].timestamp
+    ).getTime();
+
+    return ordered.filter((r) => {
+      const timestamp = new Date(r.timestamp).getTime();
+      return Number.isFinite(timestamp) &&
+        latest - timestamp >= 0 &&
+        latest - timestamp <= seconds * 1000;
+    });
   }, [data, range]);
 
   const chartData = useMemo(() => filtered.map((r) => ({

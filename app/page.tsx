@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useEffect, useMemo, useState } from "react";
 import { Activity, Droplets, Gauge, TrendingUp, Waves, Zap } from "lucide-react";
 
@@ -46,8 +46,20 @@ export default function HomePage() {
       setRows(data.rows);
       setStats(data.stats);
       setError(null);
+      window.dispatchEvent(new CustomEvent("airtrend:sensor-status", {
+        detail: {
+          timestamp: data.rows.length
+            ? data.rows[data.rows.length - 1].timestamp
+            : null,
+          error: null,
+        },
+      }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      const message = err instanceof Error ? err.message : "Unknown error";
+      setError(message);
+      window.dispatchEvent(new CustomEvent("airtrend:sensor-status", {
+        detail: { timestamp: null, error: message },
+      }));
     } finally {
       setLoading(false);
     }
